@@ -1,0 +1,128 @@
+version: '3.7'
+services:
+  # workplace:
+  #   build:
+  #     context: ./Dockers/Php-fpm
+  #     dockerfile: Dockerfile
+  #   container_name: workplace
+  #   working_dir: /var/www/html
+  #   volumes:
+  #     - ../:/var/www/html
+  #   depends_on:
+  #     - postgres
+  #   networks:
+  #     - network
+  workplace:
+    build:
+      context: ./Dockers/Nginx
+      dockerfile: Dockerfile
+    container_name: workplace
+    working_dir: /var/www/html
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ../:/var/www/html
+      - ./Dockers/Nginx/:/etc/nginx/conf.d/
+    depends_on:
+      - postgres
+    networks:
+      - network
+  postgres:
+#    platform: linux/x86_64
+    build:
+      context: ./Dockers/Postgres
+      dockerfile: Dockerfile
+    container_name: postgres
+    restart: always
+    ports:
+      - 5432:5432
+    volumes:
+      - ./Dockers/Postgres/:/var/lib/postgres/
+    environment:
+      POSTGRES_USER: default
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: people_management
+      PGDATA: /var/lib/postgres/pgdata
+    networks:
+      - network
+  redis:
+    build:
+      context: ./Dockers/Redis
+      dockerfile: Dockerfile
+    restart: always
+    command: redis-server --save 20 1 --loglevel warning --requirepass secret_redis
+    container_name: redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - ./Dockers/Redis/:/redis/data
+    networks:
+      - network
+  # mongo:
+  #   build:
+  #     context: ./Dockers/Mongo
+  #     dockerfile: Dockerfile
+  #   container_name: mongo
+  #   restart: always
+  #   ports:
+  #     - 27017:27017
+  #   environment:
+  #     MONGO_INITDB_ROOT_USERNAME: root
+  #     MONGO_INITDB_ROOT_PASSWORD: tvnaapp
+  #   volumes:
+  #     - ./Dockers/Mongo/:/mongo/data
+  #   networks:
+  #     - network
+
+  # mongo-express:
+  #   build:
+  #     context: ./Dockers/Mongo-gui
+  #     dockerfile: Dockerfile
+  #   restart: always
+  #   ports:
+  #     - 8081:8081
+  #   environment:
+  #     ME_CONFIG_MONGODB_ADMINUSERNAME: root
+  #     ME_CONFIG_MONGODB_ADMINPASSWORD: example
+  #     ME_CONFIG_MONGODB_URL: mongodb://root:tvnaapp@mongo:27017/
+  #   volumes:
+  #     - ./Dockers/Mongo-gui/data:/var/lib/mongo-express/data
+  #   networks:
+  #     - network
+  #   depends_on:
+  #     - mongo
+  pgadmin:
+    build:
+      context: ./Dockers/PgAdmin
+      dockerfile: Dockerfile
+    container_name: pgadmin
+    ports:
+      - 82:80
+    environment:
+      PGADMIN_DEFAULT_EMAIL: root@admin.com
+      PGADMIN_DEFAULT_PASSWORD: 12345678
+    networks:
+      - network
+    depends_on:
+      - postgres
+    volumes:
+      - ./Dockers/PgAdmin/data:/var/lib/pgadmin/data
+  supervisor:
+    build:
+      context: ./Dockers/Supervisors
+      dockerfile: Dockerfile
+    container_name: supervisor
+    ports:
+      - 22
+      - 80
+    volumes:
+      - ./:/var/www/html
+      - ./Dockers/Supervisors/conf/send_email_verify_link.conf:/etc/supervisor/conf.d/send_email_verify_link.conf
+      - ./Dockers/Supervisors/conf/send_email_verrify_register.conf:/etc/supervisor/conf.d/send_email_verrify_register.conf
+    networks:
+      - network
+      
+networks:
+  network:
+    driver: bridge
