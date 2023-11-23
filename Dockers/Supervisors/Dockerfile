@@ -1,1 +1,0 @@
-FROM xtremxpert/docker-supervisord
