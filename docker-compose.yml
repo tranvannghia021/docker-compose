@@ -1,1 +1,33 @@
 version: '3'
+services:
+  nginx:
+    image: "nginx"
+    container_name: "${PREFIX}_nginx"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "${PATH_SOURCE}:/app/"
+      - "./nginx/config/:/etc/nginx/conf.d/"
+    environment:
+      - PHP="${PREFIX}_php:9000"
+    depends_on:
+      - php
+    networks:
+      - app-network
+
+  php:
+    platform: "${PLATFORM}"
+    build:
+      context: .
+      args:
+        - VERSION=${PHP_VERSION}
+      dockerfile: php/Dockerfile
+    container_name: "${PREFIX}_workspace"
+    volumes:
+      - "${PATH_SOURCE}:/app/"
+    networks:
+      - app-network
+networks:
+  app-network:
+    driver: ${NETWORK_DRIVER}
