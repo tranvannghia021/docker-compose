@@ -23,7 +23,7 @@ make env
 ```
 ### build image
 ```json
-make build
+make build-all
 ```
 
 ### start docker

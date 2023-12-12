@@ -3,6 +3,7 @@ services:
   nginx:
     image: "nginx"
     container_name: "${PREFIX}_nginx"
+    restart: always
     ports:
       - "80:80"
       - "443:443"
@@ -13,6 +14,7 @@ services:
       - PHP="${PREFIX}_php:9000"
     depends_on:
       - php
+      - php_sp
     networks:
       - app-network
 
@@ -23,11 +25,119 @@ services:
       args:
         - VERSION=${PHP_VERSION}
       dockerfile: php/Dockerfile
+    restart: always
     container_name: "${PREFIX}_workspace"
     volumes:
       - "${PATH_SOURCE}:/app/"
     networks:
       - app-network
+
+  php_sp:
+    platform: "${PLATFORM}"
+    build:
+      context: .
+      args:
+        - VERSION=${PHP_VERSION_SP}
+      dockerfile: php/Dockerfile
+    restart: always
+    container_name: "${PREFIX}_workspace_sp"
+    volumes:
+      - "${PATH_SOURCE}:/app/"
+    networks:
+      - app-network
+
+  mysql:
+    platform: "${PLATFORM}"
+    build:
+      context: .
+      dockerfile: mysql/Dockerfile
+      args:
+        - VERSION=${MYSQL_VERSION}
+    restart: always
+    container_name: "${PREFIX}_mysql"
+    volumes:
+      - "./volumes/mysql:/var/lib/mysql"
+    environment:
+       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    ports:
+      - "${MYSQL_PORT}:3306"
+    networks:
+      - app-network
+
+  dbeaver:
+    platform: "${PLATFORM}"
+    build:
+      context: .
+      dockerfile: ./dbeaver/Dockerfile
+    restart: always
+    container_name: "${PREFIX}_dbeaver"
+    ports:
+      - "${DBAEVER_PORT}:8978"
+    volumes:
+      - "./volumes/dbeaver:/opt/cloudbeaver/workspace"
+    networks:
+      - app-network
+
+  phpmyadmin:
+    platform: "${PLATFORM}"
+    build:
+      context: .
+      dockerfile: phpmyadmin/Dockerfile
+    restart: always
+    container_name: "${PREFIX}_phpmyadmin"
+    depends_on:
+      - mysql
+    ports:
+      - "${PMA_PORT}:80"
+    environment:
+      PMA_HOST: mysql:3306
+      PMA_USER: ${PMA_USER}
+      PMA_PASSWORD: ${PMA_PASSWORD}
+    volumes:
+      - './volumes/phpmyadmin:/etc/phpmyadmin/config.user.inc.php'
+    networks:
+      - app-network
+  postgres:
+    platform: "${PLATFORM}"
+    build:
+      context: .
+      dockerfile: postgresql/Dockerfile
+      args:
+        - VERSION=${POSTGRES_VERSION}
+    restart: always
+    container_name: "${PREFIX}_postgres"
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+#      PGDATA: "/var/lib/postgresql/data"
+#    volumes:
+#      - "./volumes/postgres:/var/lib/postgresql/data"
+    networks:
+      - app-network
+
+  pgadmin:
+    platform: "${PLATFORM}"
+    build:
+      context: .
+      dockerfile: pgadmin/Dockerfile
+    restart: always
+    container_name: "${PREFIX}_pgadmin"
+    environment:
+        PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+        PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    ports:
+      - "${PGADMIN_LISTEN_PORT}:80"
+    depends_on:
+      - postgres
+    volumes:
+      - "./volumes/pgadmin:/var/lib/pgadmin"
+    networks:
+      - app-network
+
 networks:
   app-network:
-    driver: ${NETWORK_DRIVER}
+    driver: "${NETWORK_DRIVER}"

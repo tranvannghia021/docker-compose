@@ -1,6 +1,6 @@
 env:
 	cp ../.env.example ../.env
-build:
+build-all:
 	docker-compose up -d --build
 restart:
 	docker-compose restart
